@@ -1,4 +1,4 @@
-import express from 'express';
+import express, {RequestHandler} from 'express';
 import cors from 'cors';
 import {
     deleteMemberById, existsMemberByContactNotId,
@@ -9,11 +9,22 @@ import {
     updateMember
 } from "../repository/member-repository";
 import {Member} from "../dto/member";
+import Joi, {ValidationError} from "joi";
 
 export const router = express.Router();
 router.use(cors());
 
-router.post('/', async (req, res) => {
+const memberValidator: RequestHandler =(req, res, next)=> {
+    const member = req.body as Member;
+    try {
+        Joi.assert(member, Member.SCHEMA, {abortEarly: false});
+        next();
+    }catch(e){
+        if (e instanceof ValidationError) res.status(400).json(e.details);
+    }
+};
+
+router.post('/',memberValidator, async (req, res) => {
     const member = req.body as Member;
 
     if (await existsMemberById(member._id)){
@@ -29,7 +40,7 @@ router.post('/', async (req, res) => {
     res.sendStatus(201);
 });
 
-router.patch('/:memberId', async (req, res) => {
+router.patch('/:memberId',memberValidator, async (req, res) => {
     const member = req.body as Member;
     member._id = req.params['memberId'];
 
